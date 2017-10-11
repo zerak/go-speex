@@ -1,4 +1,4 @@
-# go-speex
+# go-speex fork from(https://github.com/winlinvip/speex)
 
 Golang binding for speex(https://github.com/winlinvip/speex)
 
@@ -7,13 +7,13 @@ Golang binding for speex(https://github.com/winlinvip/speex)
 First, get the source code:
 
 ```
-go get -d github.com/winlinvip/go-speex
+go get -d github.com/zerak/go-speex
 ```
 
 Then, compile the speex:
 
 ```
-cd $GOPATH/src/github.com/winlinvip/go-speex &&
+cd $GOPATH/src/github.com/zerak/go-speex &&
 git clone https://github.com/winlinvip/speex.git speex-lib &&
 cd speex-lib/ && bash autogen.sh && ./configure --prefix=`pwd`/objs --enable-static && make && make install &&
 cd ..
