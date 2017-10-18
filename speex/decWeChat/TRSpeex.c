@@ -1,14 +1,14 @@
 
-//#include <malloc.h> // linux
-#include <sys/malloc.h>
+#include <malloc.h> // linux
+//#include <sys/malloc.h>
 #include "TRSpeex.h"
 
 
 
 int TRSpeexDecodeInit(TRSpeexDecodeContex* stDecode) {
 	int modeID = -1;
-//	const SpeexMode *decmode=NULL;
-	const SpeexMode *decmode;
+	const SpeexMode *decmode=NULL;
+	//const SpeexMode *decmode;
 	int nframes;
 	int vbr_enabled;
 	int chan;
