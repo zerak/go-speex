@@ -1,10 +1,9 @@
 #include <memory.h>
 #include <stdio.h>
-#include <malloc.h>
+#include <sys/malloc.h>
 #include "TRSpeex.h"
 
-int main(int argc, char* argv[])
-{
+int main(int argc, char* argv[]) {
 	FILE		  *fpInput;
 	FILE		  *fpOutput;
 

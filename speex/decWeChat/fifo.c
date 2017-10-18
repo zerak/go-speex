@@ -1,5 +1,5 @@
 #include "fifo.h"
-#include <malloc.h>
+#include <sys/malloc.h>
 #include <memory.h>
 
 int pcm_fifo_init(PCMFifoBuffer *f, int size)

@@ -261,7 +261,6 @@ func NewSpeexWeChatDecoder() *SpeexWeChatDecoder {
 	return &SpeexWeChatDecoder{}
 }
 
-// @remark only support mono speex(channels must be 1).
 func (v *SpeexWeChatDecoder) Init() (err error) {
 	r := C.TRSpeexDecodeInit(&v.context)
 	if int(r) <= 0 {
@@ -342,8 +341,4 @@ func (v *SpeexWeChatDecoder) FrameSize() int {
 func (v *SpeexWeChatDecoder) SampleRate() int {
 	return 0
 	//return int(C.speexdec_sample_rate(&v.context.m))
-}
-
-func (v *SpeexWeChatDecoder) Channels() int {
-	return 1
 }

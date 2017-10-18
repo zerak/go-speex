@@ -1,7 +1,7 @@
 #ifndef _TRSPEEX_
 #define _TRSPEEX_
 
-#include "speex/speex.h"
+#include "./speex/speex.h"
 #include "fifo.h"
 
 #ifdef __cplusplus
