@@ -1,6 +1,6 @@
 
-#include <malloc.h> // linux
-//#include <sys/malloc.h>
+//#include <malloc.h> // linux
+#include <sys/malloc.h>
 #include "TRSpeex.h"
 
 

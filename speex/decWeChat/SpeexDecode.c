@@ -1,7 +1,7 @@
 #include <memory.h>
 #include <stdio.h>
-//#include <sys/malloc.h>
-#include <malloc.h>
+#include <sys/malloc.h>
+//#include <malloc.h>
 #include "TRSpeex.h"
 
 int main(int argc, char* argv[]) {
