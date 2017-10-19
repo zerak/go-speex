@@ -1,6 +1,6 @@
 #include <memory.h>
 #include <stdio.h>
-#include <sys/malloc.h>
+#include <sys/malloc.h> // macos
 //#include <malloc.h>
 #include "TRSpeex.h"
 

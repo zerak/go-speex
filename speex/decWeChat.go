@@ -5,8 +5,9 @@ package speex
 #cgo LDFLAGS: ${SRCDIR}/../speex-lib/objs/lib/libspeex.a -lm
 #include "speex/speex.h"
 
+#include <sys/malloc.h>
 //#include <malloc.h>
-//#include <memory.h>
+#include <memory.h>
 
 #define PCMMAX(a,b) ((a) > (b) ? (a) : (b))
 #define PCMMIN(a,b) ((a) > (b) ? (b) : (a))
@@ -250,7 +251,9 @@ import "C"
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
+	"unsafe"
 )
 
 type SpeexWeChatDecoder struct {
@@ -261,29 +264,29 @@ func NewSpeexWeChatDecoder() *SpeexWeChatDecoder {
 	return &SpeexWeChatDecoder{}
 }
 
-func (v *SpeexWeChatDecoder) Init() (err error) {
-	r := C.TRSpeexDecodeInit(&v.context)
-	if int(r) <= 0 {
-		return fmt.Errorf("init decoder failed, err=%v", int(r))
-	}
+//func (v *SpeexWeChatDecoder) Init() (err error) {
+//	r := C.TRSpeexDecodeInit(&v.context)
+//	if int(r) <= 0 {
+//		return fmt.Errorf("init decoder failed, err=%v", int(r))
+//	}
+//
+//	return
+//}
 
-	return
-}
-
-func (v *SpeexWeChatDecoder) Close() {
-	C.TRSpeexDecodeRelease(&v.context)
-}
+//func (v *SpeexWeChatDecoder) Close() {
+//	C.TRSpeexDecodeRelease(&v.context)
+//}
 
 // @return pcm is nil when EOF.
 func (v *SpeexWeChatDecoder) Decode(frame []byte) (pcm []byte, err error) {
-	//p := (*C.char)(unsafe.Pointer(&frame[0]))
-	//pSize := C.int(len(frame))
+	var src = bytes.NewBuffer(frame) // input
+	var result = bytes.Buffer{}      // output
 
-	pIsDone := C.int(0)
+	bufSize := 6         // read data size
+	nOutSize := C.int(0) // decode size
+	nTotalLen := 0       // decode total size
 
-	var result bytes.Buffer
-
-	var buf [44]byte
+	buf := make([]byte, 44)
 	buf[0] = 'R'
 	buf[1] = 'I'
 	buf[2] = 'F'
@@ -311,34 +314,51 @@ func (v *SpeexWeChatDecoder) Decode(frame []byte) (pcm []byte, err error) {
 	buf[38] = 't'
 	buf[39] = 'a'
 
-	nOutSize := C.int(0)
-	nTotalLen := C.int(0)
+	initRet := C.TRSpeexDecodeInit(&v.context)
+	if int(initRet) <= -1 {
+		return pcm, errors.New("init err")
+	}
+	defer C.TRSpeexDecodeRelease(&v.context)
+
+	// write buf to out result
+	ret, err := result.Write(buf)
+	if err != nil || ret != len(buf) {
+		return
+	}
+
+	// read bufSize count
+	tmpBufIn := make([]byte, bufSize)
+	tmpBufOut := make([]byte, bufSize)
+	ret, err = src.Read(tmpBufIn)
+	if err != nil || ret != bufSize {
+		return pcm, errors.New("read input header err")
+	}
+
 	for {
-		if pIsDone == 1 {
+		outBuf := (*C.char)(unsafe.Pointer(&tmpBufOut[0]))
+		inBuf := (*C.char)(unsafe.Pointer(&tmpBufIn[0]))
+		C.TRSpeexDecode(&v.context, inBuf, C.int(bufSize), outBuf, &nOutSize)
+		//fmt.Printf("codec:%v\n", nOutSize)
+
+		ret, err = src.Read(tmpBufIn)
+		if err != nil || ret != bufSize {
+			fmt.Println("src read err:", err, " total read size:", nTotalLen)
 			break
 		}
 
-		//r := C.TRSpeexDecode(&v.context,frame,&nOutSize)
-		//if r <= 0 {
-		//	return nil, fmt.Errorf("decode failed, err=%v", int(r))
-		//}
+		result.Write(tmpBufOut)
 
-		nTotalLen += nOutSize
-
-		//result.Write(pcmTmp)
+		nTotalLen += int(nOutSize)
 	}
 
+	// todo
+	// write total len
+	// part1 buf[40,41,42,43]
+	//tmp := bytes.NewBuffer(make([]byte, 4))
+	//binary.Read(tmp, binary.BigEndian, &nTotalLen)
+	//result.Write(tmp)
+	// part2 buf[4,5,6,7]
+
 	pcm = result.Bytes()
-
 	return
-}
-
-func (v *SpeexWeChatDecoder) FrameSize() int {
-	return 0
-	//return int(C.speexdec_frame_size(&v.context.m))
-}
-
-func (v *SpeexWeChatDecoder) SampleRate() int {
-	return 0
-	//return int(C.speexdec_sample_rate(&v.context.m))
 }
