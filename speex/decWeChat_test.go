@@ -1,7 +1,6 @@
 package speex_test
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -29,12 +28,11 @@ func TestWeChatDec(t *testing.T) {
 		return
 	}
 
-	decoder := speex.NewSpeexWeChatDecoder()
+	decoder := speex.NewWeChatDecoder()
 	pcm, err := decoder.Decode(frame)
 	if err != nil {
 		t.Error("decode err:", err)
 		return
 	}
-	fmt.Printf("decode pcm:%v\n", pcm)
 	ioutil.WriteFile("wechat.wav", pcm, 0666)
 }

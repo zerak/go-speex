@@ -103,8 +103,6 @@ int TRSpeexDecode(TRSpeexDecodeContex* stDecode,char* pInput, int nInputSize, ch
 	nFrameNo = 0;
 	nDecSize = 0;
 	nTmpSize = 0;
-	
-
 	while(pcm_fifo_size(stDecode->pFifo) >= 60)
 	{
 		pcm_fifo_read(stDecode->pFifo, (unsigned char*)aInputBuffer, 60);
@@ -117,8 +115,7 @@ int TRSpeexDecode(TRSpeexDecodeContex* stDecode,char* pInput, int nInputSize, ch
 			nOutSize = 0;
 			return -1;	
 		}
-		
-		
+
 		nTmpSize += stDecode->frame_size*2;
 
 		nFrameNo ++;
@@ -127,8 +124,6 @@ int TRSpeexDecode(TRSpeexDecodeContex* stDecode,char* pInput, int nInputSize, ch
 	*nOutSize = nTmpSize;
 
 	return 1;
-
-
 }
 
 int TRSpeexDecodeRelease(TRSpeexDecodeContex* stDecode)

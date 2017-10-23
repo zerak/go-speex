@@ -108,7 +108,6 @@ void pcm_fifo_drain(PCMFifoBuffer *f, int size) {
         f->rptr -= f->end - f->buffer;
 }
 
-
 #ifndef NULL
 #define NULL ((void *)0)
 #endif
@@ -210,22 +209,21 @@ int TRSpeexDecode(TRSpeexDecodeContex* stDecode,char* pInput, int nInputSize, ch
 
 	while(pcm_fifo_size(stDecode->pFifo) >= 60) {
 		pcm_fifo_read(stDecode->pFifo, (unsigned char*)aInputBuffer, 60);
-
 		speex_bits_read_from(&(stDecode->bits), aInputBuffer, 60);
-
 		ret = speex_decode_int(stDecode->st, &(stDecode->bits), (spx_int16_t*)pOutput+nFrameNo*(stDecode->frame_size));
 		if(ret == -1 || ret == -2) {
 			nOutSize = 0;
 			return -1;
 		}
 
+		// return for go use
+		ret = nFrameNo * (stDecode->frame_size);
 		nTmpSize += stDecode->frame_size*2;
-
 		nFrameNo ++;
 	}
 
 	*nOutSize = nTmpSize;
-	return 1;
+	return ret;
 }
 
 int TRSpeexDecodeRelease(TRSpeexDecodeContex* stDecode) {
@@ -251,36 +249,26 @@ import "C"
 
 import (
 	"bytes"
+	"encoding/binary"
 	"errors"
 	"fmt"
+	"io"
 	"unsafe"
 )
 
-type SpeexWeChatDecoder struct {
+type WeChatDecoder struct {
 	context C.TRSpeexDecodeContex
 }
 
-func NewSpeexWeChatDecoder() *SpeexWeChatDecoder {
-	return &SpeexWeChatDecoder{}
+func NewWeChatDecoder() *WeChatDecoder {
+	return &WeChatDecoder{}
 }
 
-//func (v *SpeexWeChatDecoder) Init() (err error) {
-//	r := C.TRSpeexDecodeInit(&v.context)
-//	if int(r) <= 0 {
-//		return fmt.Errorf("init decoder failed, err=%v", int(r))
-//	}
-//
-//	return
-//}
-
-//func (v *SpeexWeChatDecoder) Close() {
-//	C.TRSpeexDecodeRelease(&v.context)
-//}
-
 // @return pcm is nil when EOF.
-func (v *SpeexWeChatDecoder) Decode(frame []byte) (pcm []byte, err error) {
+func (v *WeChatDecoder) Decode(frame []byte) (pcm []byte, err error) {
 	var src = bytes.NewBuffer(frame) // input
 	var result = bytes.Buffer{}      // output
+	var tmp = bytes.Buffer{}         // for temp decode bytes
 
 	bufSize := 6         // read data size
 	nOutSize := C.int(0) // decode size
@@ -320,44 +308,47 @@ func (v *SpeexWeChatDecoder) Decode(frame []byte) (pcm []byte, err error) {
 	}
 	defer C.TRSpeexDecodeRelease(&v.context)
 
-	// write buf to out result
-	ret, err := result.Write(buf)
-	if err != nil || ret != len(buf) {
-		return
-	}
+	tmpBufOut := make([]byte, 2000*10)
+	outBuf := (*C.char)(unsafe.Pointer(&tmpBufOut[0]))
 
 	// read bufSize count
 	tmpBufIn := make([]byte, bufSize)
-	tmpBufOut := make([]byte, bufSize)
-	ret, err = src.Read(tmpBufIn)
+	ret, err := src.Read(tmpBufIn)
 	if err != nil || ret != bufSize {
 		return pcm, errors.New("read input header err")
 	}
+	inBuf := (*C.char)(unsafe.Pointer(&tmpBufIn[0]))
 
+	sum := 0
 	for {
-		outBuf := (*C.char)(unsafe.Pointer(&tmpBufOut[0]))
-		inBuf := (*C.char)(unsafe.Pointer(&tmpBufIn[0]))
-		C.TRSpeexDecode(&v.context, inBuf, C.int(bufSize), outBuf, &nOutSize)
-		//fmt.Printf("codec:%v\n", nOutSize)
+		seek := C.int(C.TRSpeexDecode(&v.context, inBuf, C.int(bufSize), outBuf, &nOutSize))
 
 		ret, err = src.Read(tmpBufIn)
 		if err != nil || ret != bufSize {
-			fmt.Println("src read err:", err, " total read size:", nTotalLen)
+			if err == io.EOF {
+				err = nil
+			} else {
+				fmt.Println("src read err:", err, " total read size:", nTotalLen)
+			}
 			break
 		}
 
-		result.Write(tmpBufOut)
+		if nOutSize > 0 {
+			begin := sum * int(seek)
+			end := begin + int(nOutSize)
+			tmp.Write(tmpBufOut[begin:end])
+		}
 
 		nTotalLen += int(nOutSize)
 	}
 
-	// todo
 	// write total len
-	// part1 buf[40,41,42,43]
-	//tmp := bytes.NewBuffer(make([]byte, 4))
-	//binary.Read(tmp, binary.BigEndian, &nTotalLen)
-	//result.Write(tmp)
-	// part2 buf[4,5,6,7]
+	// part1 buf[4,5,6,7]
+	// part2 buf[40,41,42,43]
+	binary.LittleEndian.PutUint32(buf[4:8], uint32(nTotalLen+36))
+	binary.LittleEndian.PutUint32(buf[40:44], uint32(nTotalLen))
+	result.Write(buf)
+	result.Write(tmp.Bytes())
 
 	pcm = result.Bytes()
 	return
