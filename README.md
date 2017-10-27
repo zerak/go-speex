@@ -27,4 +27,4 @@ To run all examples:
 cd $GOPATH/src/github.com/zerak/go-speex && go test ./...
 ```
 
-the file 4.speex is WeChat format the TestWeChatDec show the code for decode.
+the file 4.speex is WeChat void file. the TestWeChatDec show the code for decode.
